@@ -9,7 +9,7 @@ from datetime import date, timedelta
 
 import Task_3_Network as Network
 import Task_2_Traffic as Traffic
-
+import GSM_Architecture as GSM
 
 # ============================================================
 # 1. PAGE CONFIGURATION
@@ -83,13 +83,13 @@ selected_module = st.sidebar.radio(
     "MAIN NAVIGATION",
     [
         "Dashboard Overview",
+        "GSM Architecture",
         "Network Benchmarking",
         "GSM Traffic Simulation",
         "Installation and Maintenance"
     ],
     key="main_navigation"
 )
-
 
 # ============================================================
 # 4. MAIN DASHBOARD HEADER
@@ -411,6 +411,600 @@ if selected_module == "Dashboard Overview":
 
         st.info("No maintenance schedules available.")
 
+# ============================================================
+# 8. GSM ARCHITECTURE MODULE
+# ============================================================
+
+elif selected_module == "GSM Architecture":
+
+    st.header("📡 GSM NETWORK ARCHITECTURE")
+
+    st.caption(
+        "GSM Network Components, Call Routing, "
+        "Radio Channel Allocation and Monitoring"
+    )
+
+    # --------------------------------------------------------
+    # INITIALIZE GSM NETWORK
+    # --------------------------------------------------------
+
+    if "gsm_network" not in st.session_state:
+
+        network = GSM.get_default_topology()
+
+        GSM.initialize_runtime(network)
+
+        st.session_state["gsm_network"] = network
+
+    network = st.session_state["gsm_network"]
+
+    # --------------------------------------------------------
+    # ARCHITECTURE SUBMENU
+    # --------------------------------------------------------
+
+    architecture_page = st.sidebar.radio(
+        "GSM ARCHITECTURE MENU",
+        [
+            "Network Overview",
+            "Network Components",
+            "Mobile-to-Mobile Call",
+            "External Call",
+            "Channel Monitoring",
+            "Active Calls"
+        ],
+        key="architecture_navigation"
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # PAGE 1: NETWORK OVERVIEW
+    # --------------------------------------------------------
+
+    if architecture_page == "Network Overview":
+
+        st.subheader("GSM Network Overview")
+
+        summary = GSM.network_summary(network)
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Mobile Subscribers",
+            summary["mobile_subscribers"]
+        )
+
+        col2.metric(
+            "Base Transceiver Stations",
+            summary["base_transceiver_stations"]
+        )
+
+        col3.metric(
+            "Base Station Controllers",
+            summary["base_station_controllers"]
+        )
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Mobile Switching Centres",
+            summary["mobile_switching_centres"]
+        )
+
+        col2.metric(
+            "Total Radio Channels",
+            summary["total_radio_channels"]
+        )
+
+        col3.metric(
+            "Active Calls",
+            summary["active_calls"]
+        )
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Occupied Channels",
+            summary["occupied_channels"]
+        )
+
+        col2.metric(
+            "Available Channels",
+            summary["available_channels"]
+        )
+
+        col3.metric(
+            "Gateway MSC",
+            summary["gateway_msc"]
+        )
+
+        st.divider()
+
+        st.subheader("Logical GSM Network Structure")
+
+        st.markdown("""
+        ```text
+                   MOBILE STATIONS
+                  MS001  MS002  MS003
+                       |
+                       v
+              BASE TRANSCEIVER STATIONS
+                  BTS001  BTS002  BTS003
+                       |
+                       v
+              BASE STATION CONTROLLERS
+                     BSC001
+                     BSC002
+                       |
+                       v
+              MOBILE SWITCHING CENTRE
+                      MSC001
+                       |
+                 +-----+------+
+                 |            |
+                 v            v
+                HLR          VLR
+                       |
+                       v
+              GATEWAY MSC
+                    GMSC001
+                       |
+                       v
+               EXTERNAL NETWORK
+        ```
+        """)
+
+        st.info(
+            "The architecture represents the logical GSM call path. "
+            "The HLR and VLR provide subscriber information and "
+            "location-related services."
+        )
+
+        st.divider()
+
+        st.subheader("Topology Validation")
+
+        validation = GSM.validate_topology(network)
+
+        if not validation:
+
+            st.success("GSM topology validation successful.")
+
+        else:
+
+            for issue in validation:
+
+                st.error(issue)
+
+    # --------------------------------------------------------
+    # PAGE 2: NETWORK COMPONENTS
+    # --------------------------------------------------------
+
+    elif architecture_page == "Network Components":
+
+        st.subheader("GSM Network Components")
+
+        component_types = [
+            "MS",
+            "BTS",
+            "BSC",
+            "MSC",
+            "GMSC",
+            "HLR",
+            "VLR"
+        ]
+
+        selected_component = st.selectbox(
+            "Select Network Component",
+            component_types
+        )
+
+        component_data = network[selected_component]
+
+        st.write(
+            f"### {selected_component} Equipment Records"
+        )
+
+        component_df = pd.DataFrame.from_dict(
+            component_data,
+            orient="index"
+        )
+
+        component_df.index.name = "Component ID"
+
+        component_df = component_df.reset_index()
+
+        st.dataframe(
+            component_df,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.divider()
+
+        st.subheader("Component Summary")
+
+        st.metric(
+            "Number of Components",
+            len(component_data)
+        )
+
+    # --------------------------------------------------------
+    # PAGE 3: MOBILE-TO-MOBILE CALL
+    # --------------------------------------------------------
+
+    elif architecture_page == "Mobile-to-Mobile Call":
+
+        st.subheader("Mobile-to-Mobile Call Establishment")
+
+        st.write(
+            "Select two mobile subscribers to establish a "
+            "simulated GSM call."
+        )
+
+        mobile_stations = list(network["MS"].keys())
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            source_ms = st.selectbox(
+                "Calling Mobile Station",
+                mobile_stations,
+                key="source_mobile"
+            )
+
+        with col2:
+
+            destination_ms = st.selectbox(
+                "Receiving Mobile Station",
+                mobile_stations,
+                key="destination_mobile"
+            )
+
+        if st.button("📞 ESTABLISH MOBILE CALL"):
+
+            if source_ms == destination_ms:
+
+                st.warning(
+                    "The calling and receiving mobile stations "
+                    "must be different."
+                )
+
+            else:
+
+                with st.spinner("Establishing GSM call..."):
+
+                    result = GSM.trace_call(
+                        network,
+                        source_ms,
+                        destination_ms
+                    )
+
+                st.session_state["gsm_network"] = network
+
+                st.session_state["last_gsm_call"] = result
+
+        if "last_gsm_call" in st.session_state:
+
+            result = st.session_state["last_gsm_call"]
+
+            st.divider()
+
+            st.subheader("Call Establishment Results")
+
+            if result["status"] == "Success":
+
+                st.success("Call successfully established!")
+
+                col1, col2 = st.columns(2)
+
+                col1.metric(
+                    "Call ID",
+                    result["call_id"]
+                )
+
+                col2.metric(
+                    "Call Status",
+                    result["status"]
+                )
+
+                st.write("Calling Station:", result["source"])
+
+                st.write("Receiving Station:", result["destination"])
+
+                st.write("Allocated BTS:", result["allocated_bts"])
+
+                st.subheader("Call Routing Path")
+
+                for step, component in enumerate(
+                    result["route"],
+                    start=1
+                ):
+
+                    st.write(f"{step}. {component}")
+
+                st.info(result["message"])
+
+            else:
+
+                st.error(
+                    result.get(
+                        "reason",
+                        "Call establishment failed."
+                    )
+                )
+
+    # --------------------------------------------------------
+    # PAGE 4: EXTERNAL CALL
+    # --------------------------------------------------------
+
+    elif architecture_page == "External Call":
+
+        st.subheader("GSM External Network Call")
+
+        st.write(
+            "Simulate a call from a GSM mobile subscriber "
+            "to an external telephone network."
+        )
+
+        mobile_stations = list(network["MS"].keys())
+
+        source_ms = st.selectbox(
+            "Select Calling Mobile Station",
+            mobile_stations,
+            key="external_source"
+        )
+
+        if st.button("📞 ESTABLISH EXTERNAL CALL"):
+
+            with st.spinner("Routing external call..."):
+
+                result = GSM.trace_external_call(
+                    network,
+                    source_ms
+                )
+
+            st.session_state["gsm_network"] = network
+
+            st.session_state["last_external_call"] = result
+
+        if "last_external_call" in st.session_state:
+
+            result = st.session_state["last_external_call"]
+
+            st.divider()
+
+            if result["status"] == "Success":
+
+                st.success("External call established!")
+
+                st.metric(
+                    "Call ID",
+                    result["call_id"]
+                )
+
+                st.write(
+                    "Calling Station:",
+                    result["source"]
+                )
+
+                st.write(
+                    "Destination:",
+                    result["destination"]
+                )
+
+                st.subheader("External Call Routing")
+
+                for step, component in enumerate(
+                    result["route"],
+                    start=1
+                ):
+
+                    st.write(f"{step}. {component}")
+
+                st.info(result["message"])
+
+            else:
+
+                st.error(
+                    result.get(
+                        "reason",
+                        "External call failed."
+                    )
+                )
+
+    # --------------------------------------------------------
+    # PAGE 5: CHANNEL MONITORING
+    # --------------------------------------------------------
+
+    elif architecture_page == "Channel Monitoring":
+
+        st.subheader("BTS Radio Channel Monitoring")
+
+        st.write(
+            "Monitor the availability and utilization "
+            "of radio channels at each BTS."
+        )
+
+        channel_data = GSM.get_channel_status(network)
+
+        records = []
+
+        for bts_id, details in channel_data.items():
+
+            records.append({
+
+                "BTS": bts_id,
+
+                "Total Channels": details["total_channels"],
+
+                "Occupied Channels": details["occupied_channels"],
+
+                "Available Channels": details["available_channels"],
+
+                "Utilization (%)": details["utilization_percent"],
+
+                "Status": details["status"]
+
+            })
+
+        channel_df = pd.DataFrame(records)
+
+        display_dataframe(channel_df)
+
+        st.divider()
+
+        st.subheader("Channel Utilization Graph")
+
+        if not channel_df.empty:
+
+            graph_data = channel_df.set_index("BTS")[
+                ["Occupied Channels", "Available Channels"]
+            ]
+
+            st.bar_chart(graph_data)
+
+        st.divider()
+
+        st.subheader("Overall Channel Utilization")
+
+        total_channels = sum(
+            item["total_channels"]
+            for item in channel_data.values()
+        )
+
+        occupied_channels = sum(
+            item["occupied_channels"]
+            for item in channel_data.values()
+        )
+
+        if total_channels > 0:
+
+            utilization = (
+                occupied_channels / total_channels
+            ) * 100
+
+        else:
+
+            utilization = 0
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Total Channels",
+            total_channels
+        )
+
+        col2.metric(
+            "Occupied Channels",
+            occupied_channels
+        )
+
+        col3.metric(
+            "Overall Utilization",
+            f"{utilization:.2f}%"
+        )
+
+        st.progress(
+            min(utilization / 100, 1.0)
+        )
+
+    # --------------------------------------------------------
+    # PAGE 6: ACTIVE CALLS
+    # --------------------------------------------------------
+
+    elif architecture_page == "Active Calls":
+
+        st.subheader("Active GSM Calls")
+
+        active_calls = GSM.get_active_calls(network)
+
+        if active_calls:
+
+            st.success(
+                f"{len(active_calls)} active call(s) currently established."
+            )
+
+            records = []
+
+            for call_id, details in active_calls.items():
+
+                records.append({
+
+                    "Call ID": call_id,
+
+                    "Source": details["source"],
+
+                    "Destination": details["destination"],
+
+                    "Route": " → ".join(
+                        map(str, details["route"])
+                    ),
+
+                    "Allocated BTS": ", ".join(
+                        map(str, details["bts_list"])
+                    )
+
+                })
+
+            active_df = pd.DataFrame(records)
+
+            display_dataframe(active_df)
+
+            st.divider()
+
+            st.subheader("Terminate a Call")
+
+            selected_call = st.selectbox(
+                "Select Call ID",
+                list(active_calls.keys())
+            )
+
+            if st.button("📴 TERMINATE SELECTED CALL"):
+
+                result = GSM.terminate_call(
+                    network,
+                    selected_call
+                )
+
+                st.session_state["gsm_network"] = network
+
+                if result["status"] == "Success":
+
+                    st.success(
+                        f"Call {selected_call} terminated successfully."
+                    )
+
+                    st.info(
+                        "The allocated BTS radio channels "
+                        "have been released."
+                    )
+
+                else:
+
+                    st.error(
+                        result.get(
+                            "reason",
+                            "Call termination failed."
+                        )
+                    )
+
+                st.rerun()
+
+        else:
+
+            st.info(
+                "There are currently no active GSM calls. "
+                "Establish a mobile-to-mobile or external call "
+                "to see it here."
+            )
+
+    st.divider()
+
+    st.caption(
+        "GSM Architecture and Call Routing Simulation Module"
+    )
 
 # ============================================================
 # 8. NETWORK BENCHMARKING MODULE
